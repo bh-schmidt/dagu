@@ -185,6 +185,33 @@ func TestClientDispatch(t *testing.T) {
 		assert.Empty(t, entries)
 	})
 
+	t.Run("DefersSourceLessFileDependenciesToCoordinator", func(t *testing.T) {
+		t.Parallel()
+
+		mockCoord := &mockCoordinatorService{
+			dispatchFunc: func(_ context.Context, req *coordinatorv1.DispatchRequest) (*coordinatorv1.DispatchResponse, error) {
+				assert.Empty(t, req.Task.WorkspaceBundleDigest)
+				return &coordinatorv1.DispatchResponse{}, nil
+			},
+		}
+		server, addr := startMockServer(t, mockCoord)
+		defer server.Stop()
+
+		host, port := parseHostPort(addr)
+		config := coordinator.DefaultConfig()
+		config.MaxRetries = 0
+		client := coordinator.New(&mockServiceMonitor{members: []serviceregistry.HostInfo{{
+			ID: "coord-1", Host: host, Port: port, Status: serviceregistry.ServiceStatusActive,
+		}}}, config)
+
+		err := client.Dispatch(context.Background(), dispatch.DispatchRequest{Task: &dispatch.DispatchTask{
+			DAGRunID:   "run-remote-child",
+			Target:     "remote-child",
+			Definition: "name: remote-child\nsteps:\n  - name: consume\n    run: cat input.txt\n    dependencies: input.txt\n",
+		}})
+		require.NoError(t, err)
+	})
+
 	t.Run("Success", func(t *testing.T) {
 		t.Parallel()
 		config := coordinator.DefaultConfig()

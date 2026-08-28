@@ -241,7 +241,9 @@ func (cli *clientImpl) Dispatch(ctx context.Context, req dispatch.DispatchReques
 		return fmt.Errorf("dispatch task is nil")
 	}
 	if err := cli.prepareTaskWorkspace(ctx, task); err != nil {
-		return err
+		if !errors.Is(err, runtimeexec.ErrDAGWorkspaceSourceUnavailable) {
+			return err
+		}
 	}
 	protoTask, err := convert.DispatchTaskToProto(task)
 	if err != nil {
