@@ -185,7 +185,7 @@ func TestClientDispatch(t *testing.T) {
 		assert.Empty(t, entries)
 	})
 
-	t.Run("DefersSourceLessFileDependenciesToCoordinator", func(t *testing.T) {
+	t.Run("DefersSourceLessFileDependenciesWithWorkingDirToCoordinator", func(t *testing.T) {
 		t.Parallel()
 
 		mockCoord := &mockCoordinatorService{
@@ -200,14 +200,16 @@ func TestClientDispatch(t *testing.T) {
 		host, port := parseHostPort(addr)
 		config := coordinator.DefaultConfig()
 		config.MaxRetries = 0
+		config.WorkspaceBundleDir = filepath.Join(t.TempDir(), "workspace-bundles")
 		client := coordinator.New(&mockServiceMonitor{members: []serviceregistry.HostInfo{{
 			ID: "coord-1", Host: host, Port: port, Status: serviceregistry.ServiceStatusActive,
 		}}}, config)
+		workerOnlyDir := filepath.Join(t.TempDir(), "missing-source-workspace")
 
 		err := client.Dispatch(context.Background(), dispatch.DispatchRequest{Task: &dispatch.DispatchTask{
 			DAGRunID:   "run-remote-child",
 			Target:     "remote-child",
-			Definition: "name: remote-child\nsteps:\n  - name: consume\n    run: cat input.txt\n    dependencies: input.txt\n",
+			Definition: fmt.Sprintf("name: remote-child\nworking_dir: %q\nsteps:\n  - name: consume\n    run: cat input.txt\n    dependencies: input.txt\n", workerOnlyDir),
 		}})
 		require.NoError(t, err)
 	})

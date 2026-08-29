@@ -20,7 +20,7 @@ type workspaceSeedKey struct{}
 
 // ErrDAGWorkspaceSourceUnavailable indicates that the current host cannot
 // resolve a dependency-bearing DAG's source workspace.
-var ErrDAGWorkspaceSourceUnavailable = errors.New("DAG file dependencies require a source file or working directory")
+var ErrDAGWorkspaceSourceUnavailable = errors.New("DAG file dependencies require a local source workspace")
 
 // WithWorkspaceSeed carries an immutable workspace through inline child workflows.
 func WithWorkspaceSeed(ctx context.Context, seed WorkspaceSeed) context.Context {

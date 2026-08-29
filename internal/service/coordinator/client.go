@@ -350,6 +350,10 @@ func (cli *clientImpl) prepareTaskWorkspace(ctx context.Context, task *dispatch.
 	if err != nil {
 		return fmt.Errorf("load DAG for file dependency snapshot: %w", err)
 	}
+	// A configured working_dir does not establish that this host owns the DAG source.
+	if task.SourceFile == "" && task.SourceWorkDir == "" && runtimeexec.HasDAGFileDependencies(dag) {
+		return runtimeexec.ErrDAGWorkspaceSourceUnavailable
+	}
 	desc, archivePath, err := runtimeexec.PrepareDAGWorkspaceFile(ctx, dag, cli.config.WorkspaceBundleDir)
 	if err != nil {
 		return err
