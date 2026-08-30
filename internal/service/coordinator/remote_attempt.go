@@ -250,9 +250,7 @@ func (h *Handler) validateAttemptLease(lease *dispatch.DAGRunLease, identity att
 		return status.Error(codes.FailedPrecondition, remoteAttemptRejectedSuperseded)
 	}
 	if identity.claimKey != identity.attemptKey {
-		if lease.DAGRun != identity.root {
-			return status.Error(codes.FailedPrecondition, remoteAttemptRejectedSuperseded)
-		}
+		// Inline descendants inherit their dispatching ancestor's worker claim.
 		return nil
 	}
 	if lease.DAGRun != identity.dagRun ||
