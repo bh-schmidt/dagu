@@ -39,6 +39,29 @@ func TestValidateAttemptLeaseAcceptsNestedInlineChild(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestValidateAttemptLeaseAcceptsNestedInlineChildWithUnsetLeaseRoot(t *testing.T) {
+	t.Parallel()
+
+	root := ir.NewDAGRunRef("root", "root-run")
+	lease := &dispatch.DAGRunLease{
+		AttemptKey: "root-claim",
+		DAGRun:     root,
+		AttemptID:  "root-attempt",
+		WorkerID:   "worker-2",
+	}
+
+	err := (&Handler{}).validateAttemptLease(lease, attemptIdentity{
+		attemptKey: "child-attempt-key",
+		claimKey:   lease.AttemptKey,
+		workerID:   lease.WorkerID,
+		dagRun:     ir.NewDAGRunRef("child", "child-run"),
+		root:       root,
+		attemptID:  "child-attempt",
+	})
+
+	require.NoError(t, err)
+}
+
 func TestValidateAttemptLeaseRejectsNestedInlineChildFromDifferentRoot(t *testing.T) {
 	t.Parallel()
 
@@ -48,6 +71,30 @@ func TestValidateAttemptLeaseRejectsNestedInlineChildFromDifferentRoot(t *testin
 		DAGRun:     ir.NewDAGRunRef("parent", "parent-run"),
 		Root:       root,
 		AttemptID:  "parent-attempt",
+		WorkerID:   "worker-2",
+	}
+
+	err := (&Handler{}).validateAttemptLease(lease, attemptIdentity{
+		attemptKey: "child-attempt-key",
+		claimKey:   lease.AttemptKey,
+		workerID:   lease.WorkerID,
+		dagRun:     ir.NewDAGRunRef("child", "child-run"),
+		root:       ir.NewDAGRunRef("other-root", "other-root-run"),
+		attemptID:  "child-attempt",
+	})
+
+	require.Equal(t, codes.FailedPrecondition, status.Code(err))
+	require.Equal(t, remoteAttemptRejectedSuperseded, status.Convert(err).Message())
+}
+
+func TestValidateAttemptLeaseRejectsNestedInlineChildFromDifferentRootWithUnsetLeaseRoot(t *testing.T) {
+	t.Parallel()
+
+	root := ir.NewDAGRunRef("root", "root-run")
+	lease := &dispatch.DAGRunLease{
+		AttemptKey: "root-claim",
+		DAGRun:     root,
+		AttemptID:  "root-attempt",
 		WorkerID:   "worker-2",
 	}
 
